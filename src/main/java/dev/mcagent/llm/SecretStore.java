@@ -30,8 +30,7 @@ public final class SecretStore {
         if (!fromFile.isEmpty()) {
             return fromFile;
         }
-        String configured = AgentConfig.API_KEY.get();
-        return configured == null ? "" : configured.trim();
+        return "";
     }
 
     public static boolean present() {

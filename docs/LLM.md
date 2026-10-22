@@ -29,12 +29,15 @@ answer in prose and the loop will stop after one step.
 Resolution order, first hit wins:
 
 1. environment variable `MCAGENT_API_KEY` (best: launcher profile env);
-2. `config/mcagent/secret.txt` (written with 0600 on POSIX);
-3. `llm.apiKey` in `config/mcagent-client.toml`.
+2. `config/mcagent/secret.txt` (0600 on POSIX).
+
+The key is deliberately **not** a TOML option: config files get copied into
+modpack reports and screenshots.
 
 The key is read into memory per request, never logged, never included in
 prompts, never returned by `/state` or `/health`, and never sent to the HTTP
-bridge. `/agent key` only reports `set` or `missing`.
+bridge. `/agent key` only reports `set` or `missing`. There is no in-game
+command that accepts a key, because chat and command history are logged.
 
 ## Commands
 

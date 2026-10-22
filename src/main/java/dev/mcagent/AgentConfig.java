@@ -21,7 +21,6 @@ public final class AgentConfig {
     public static final ForgeConfigSpec.IntValue MAX_QUEUE;
     public static final ForgeConfigSpec.ConfigValue<String> BASE_URL;
     public static final ForgeConfigSpec.ConfigValue<String> MODEL;
-    public static final ForgeConfigSpec.ConfigValue<String> API_KEY;
     public static final ForgeConfigSpec.IntValue MAX_STEPS;
     public static final ForgeConfigSpec.IntValue MAX_TOKENS;
     public static final ForgeConfigSpec.DoubleValue TEMPERATURE;
@@ -47,8 +46,6 @@ public final class AgentConfig {
         BASE_URL = b.comment("OpenAI-compatible base URL. Must be https and non-local.")
                 .define("baseUrl", "https://api.openai.com/v1");
         MODEL = b.comment("Model name.").define("model", "gpt-4o-mini");
-        API_KEY = ***"API key. Prefer the MCAGENT_API_KEY environment variable or config/mcagent/secret.txt.")
-                .define("apiKey", "");
         MAX_STEPS = b.comment("Hard cap on model calls per run.").defineInRange("maxSteps", 20, 1, 200);
         MAX_TOKENS = b.comment("max_tokens per request.").defineInRange("maxTokens", 700, 64, 8192);
         TEMPERATURE = b.comment("Sampling temperature.").defineInRange("temperature", 0.2, 0.0, 2.0);
