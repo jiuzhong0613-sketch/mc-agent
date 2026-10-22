@@ -24,8 +24,23 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew build --no-daemon --stacktrace
+      - name: Rename jar
+        if: success()
+        shell: bash
+        run: |
+          MC=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          case "${{ matrix.os }}" in
+            ubuntu-latest) OS=linux ;;
+            windows-latest) OS=windows ;;
+            macos-latest) OS=macos ;;
+            *) OS=unknown ;;
+          esac
+          cd build/libs
+          for f in *.jar; do
+            cp "$f" "mc_agent-${MC}-forge-${OS}.jar"
+          done
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: mcagent-${{ matrix.os }}
-          path: build/libs/*.jar
+          name: mc_agent-${{ matrix.os }}
+          path: build/libs/mc_agent-*.jar
