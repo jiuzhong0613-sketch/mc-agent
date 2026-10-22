@@ -2,7 +2,7 @@
 
 > 最后更新：2026-10-22 11:10（UTC+8）
 > 仓库：https://github.com/jiuzhong0613-sketch/mc-agent
-> 远端 main：`55b0b42`（三系统 CI 通过）
+> 远端 main：见仓库最新提交（本轮主动感知/记忆改动待 CI 验证）
 > 版本：`0.1.0`，协议 `mc-agent/1`
 > 状态：**可编译、未实机验证**
 
@@ -202,7 +202,18 @@ client tick ──> AgentRuntime.tick()
 | permissions | allowAttack | **false** | |
 | permissions | allowChat | **false** | |
 
-### 6.9 构建与 CI
+### 6.9 主动感知与记忆（新增，未实机验证）
+
+- 状态自带 `coverage`，明确“只看到半径 5、仅已加载区块”；
+- 9 个只读查询：`query_block/scan/entities/inventory/raycast/can_stand/surface/route/env`；
+- 查询有 tick 缓存与每步预算（默认 6 次）；
+- 动作失败自动补探测（`autoProbe`）：walk_to→route、mine/place→block、attack→entities；
+- 每世界记忆文件：facts / lessons / skills / episodes，原子写、上限、按关键词+置信度+新近度检索；
+- `remember` / `recall` 工具，启动时自动注入最多 900 字记忆摘要；
+- `done` 可带 `lesson`，下一次运行生效；
+- 拟人化：转向速度 18°/tick、步间 250ms，`look` / `look_at` 需要多 tick 完成。
+
+### 6.10 构建与 CI
 
 - JDK 17（Temurin），Gradle Wrapper 8.8，ForgeGradle 6。
 - GitHub Actions 矩阵：Ubuntu / Windows / macOS；`./gradlew build`；产物上传为 artifact。
@@ -218,6 +229,7 @@ client tick ──> AgentRuntime.tick()
 | 单元测试 | 无 |
 | 实机启动 | 未验证 |
 | agent 端到端 | 未验证（需要真实 Key 和客户端） |
+| 主动感知 / 记忆 / 拟人转向 | 未验证（本轮新增） |
 | 多人服测试 | 未做 |
 | 性能/内存 | 未测 |
 | 发布包（Modrinth/CurseForge） | 未做 |

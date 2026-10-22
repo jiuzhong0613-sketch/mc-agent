@@ -55,7 +55,7 @@ public final class Tools {
                 """));
         tools.add(fn("done", "Finish the task. Call this when the goal is reached or impossible.",
                 """
-                {"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]}
+                {"type":"object","properties":{"summary":{"type":"string"},"lesson":{"type":"string","description":"one durable lesson for next time"}},"required":["summary"]}
                 """));
         return tools;
     }

@@ -9,6 +9,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -88,7 +89,7 @@ public final class Actions {
         }
     }
 
-    private static void face(Minecraft mc, double x, double y, double z) {
+    private static boolean face(Minecraft mc, double x, double y, double z) {
         LocalPlayer p = mc.player;
         double dx = x - p.getX();
         double dy = y - p.getEyeY();
@@ -96,11 +97,21 @@ public final class Actions {
         double horizontal = Math.sqrt(dx * dx + dz * dz);
         float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
         float pitch = (float) (-Math.toDegrees(Math.atan2(dy, horizontal)));
-        p.setYRot(yaw);
-        p.setXRot(pitch);
-        p.yRotO = yaw;
-        p.xRotO = pitch;
-        p.setDeltaMovement(p.getDeltaMovement());
+        return aim(mc, yaw, pitch);
+    }
+
+    /**
+     * Rotate toward the target at a human-like speed instead of snapping.
+     * Returns true when the camera is aligned within one step.
+     */
+    private static boolean aim(Minecraft mc, float targetYaw, float targetPitch) {
+        LocalPlayer p = mc.player;
+        float max = (float) (double) AgentConfig.TURN_SPEED.get();
+        float deltaYaw = Mth.wrapDegrees(targetYaw - p.getYRot());
+        float deltaPitch = targetPitch - p.getXRot();
+        p.setYRot(p.getYRot() + Mth.clamp(deltaYaw, -max, max));
+        p.setXRot(Mth.clamp(p.getXRot() + Mth.clamp(deltaPitch, -max, max), -90.0f, 90.0f));
+        return Math.abs(deltaYaw) <= max && Math.abs(deltaPitch) <= max;
     }
 
     private static JsonObject done() {
@@ -122,13 +133,16 @@ public final class Actions {
         }
 
         @Override
+        public int timeoutTicks() {
+            return 30;
+        }
+
+        @Override
         public JsonObject tick(Minecraft mc) {
             if (!AgentConfig.ALLOW_MOVE.get()) {
                 throw new IllegalStateException("movement disabled by config");
             }
-            mc.player.setYRot(yaw);
-            mc.player.setXRot(Math.max(-90f, Math.min(90f, pitch)));
-            return done();
+            return aim(mc, yaw, pitch) ? done() : null;
         }
     }
 
@@ -149,9 +163,13 @@ public final class Actions {
         }
 
         @Override
+        public int timeoutTicks() {
+            return 40;
+        }
+
+        @Override
         public JsonObject tick(Minecraft mc) {
-            face(mc, x, y, z);
-            return done();
+            return face(mc, x, y, z) ? done() : null;
         }
     }
 

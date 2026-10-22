@@ -77,6 +77,10 @@ public final class AgentRuntime {
         return bridge != null;
     }
 
+    public int tickCount() {
+        return tick;
+    }
+
     public JsonObject state() throws Exception {
         return ClientThread.call(() -> Observation.snapshot(tick, eventsCopy()), 3000);
     }

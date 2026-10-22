@@ -57,7 +57,19 @@ public final class Observation {
         out.add("entities", entities(mc, player));
         out.add("menu", menu(player));
         out.add("events", events);
+        out.add("coverage", coverage());
         return out;
+    }
+
+    private static JsonObject coverage() {
+        JsonObject o = new JsonObject();
+        o.addProperty("blockRadius", AgentConfig.OBS_RADIUS.get());
+        o.addProperty("blockCap", MAX_BLOCKS);
+        o.addProperty("entityRadius", 32);
+        o.addProperty("entityCap", MAX_ENTITIES);
+        o.addProperty("loadedChunksOnly", true);
+        o.addProperty("note", "partial view; call query_* tools for anything outside these limits");
+        return o;
     }
 
     private static JsonObject player(LocalPlayer p, Minecraft mc) {

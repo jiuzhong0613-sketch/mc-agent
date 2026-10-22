@@ -9,6 +9,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import dev.mcagent.AgentConfig;
 import dev.mcagent.AgentRuntime;
+import dev.mcagent.query.QueryRegistry;
 import net.minecraft.SharedConstants;
 import org.slf4j.Logger;
 
@@ -37,7 +38,9 @@ public final class BridgeServer {
         for (String capability : new String[]{
                 "obs.player.v1", "obs.inventory.v1", "obs.blocks.v1", "obs.entities.v1",
                 "act.look.v1", "act.move.v1", "act.walk_to.v1", "act.mine.v1", "act.place.v1",
-                "act.use.v1", "act.attack.v1", "act.chat.v1", "act.select_slot.v1", "act.drop.v1"
+                "act.use.v1", "act.attack.v1", "act.chat.v1", "act.select_slot.v1", "act.drop.v1",
+                "query.block.v1", "query.scan.v1", "query.entities.v1", "query.inventory.v1",
+                "query.raycast.v1", "query.can_stand.v1", "query.surface.v1", "query.route.v1", "query.env.v1"
         }) {
             CAPABILITIES.add(capability);
         }
@@ -60,6 +63,7 @@ public final class BridgeServer {
         server.createContext("/result", exchange -> dispatch(exchange, "GET", this::result));
         server.createContext("/act", exchange -> dispatch(exchange, "POST", this::act));
         server.createContext("/cancel", exchange -> dispatch(exchange, "POST", this::cancel));
+        server.createContext("/query", exchange -> dispatch(exchange, "POST", this::query));
         server.setExecutor(Executors.newFixedThreadPool(4, runnable -> {
             Thread thread = new Thread(runnable, "mcagent-bridge");
             thread.setDaemon(true);
@@ -133,6 +137,14 @@ public final class BridgeServer {
         JsonObject out = AgentRuntime.get().submit(request);
         boolean accepted = out.has("ok") && out.get("ok").getAsBoolean();
         return new Reply(accepted ? 202 : 409, out);
+    }
+
+    private Reply query(HttpExchange exchange) throws Exception {
+        JsonObject request = JsonParser.parseString(readBody(exchange)).getAsJsonObject();
+        String name = request.has("name") ? request.get("name").getAsString() : "";
+        JsonObject args = request.has("args") && request.get("args").isJsonObject()
+                ? request.getAsJsonObject("args") : new JsonObject();
+        return new Reply(200, QueryRegistry.run(name, args, false));
     }
 
     private Reply cancel(HttpExchange exchange) throws Exception {

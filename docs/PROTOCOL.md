@@ -14,6 +14,7 @@ If `bridge.token` is configured, every request must send
 | GET | `/result` | last action result only |
 | POST | `/act` | enqueue one action |
 | POST | `/cancel` | cancel the running action and clear the queue |
+| POST | `/query` | read-only probe, see below |
 
 `/act` returns `202` when the action is queued, `409` when the queue is full,
 `400` for a malformed or unknown action.
@@ -87,6 +88,23 @@ Every action returns:
 
 Failures carry `"ok": false` and `"error"` (for example `out of reach`,
 `timeout`, `stuck at distance 3.2`, `movement disabled by config`).
+
+## Queries
+
+`POST /query` with `{"name":"query_route","args":{"x":120,"y":68,"z":-34}}`.
+Queries are read-only and never enter the action queue.
+
+| Name | Args | Result |
+|---|---|---|
+| `query_block` | x,y,z | loaded, id, air, solid, fluid, hardness, light |
+| `query_scan` | x,y,z,radius | type counts, nearest coordinates, solid samples |
+| `query_entities` | radius | id, type, pos, dist, health, lineOfSight |
+| `query_inventory` | — | selected + all non-empty slots |
+| `query_raycast` | distance | kind, block/entity, pos, face, reach |
+| `query_can_stand` | x,y,z | feetFree, headFree, floorSolid, water, lava, canStand |
+| `query_surface` | x,z | surface y and block |
+| `query_route` | x,y,z | verdict clear/blocked/water/lava/unloaded + first obstruction |
+| `query_env` | — | time, weather, biome, light, difficulty |
 
 ## Versioning
 

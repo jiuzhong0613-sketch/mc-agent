@@ -22,9 +22,13 @@ public final class AgentConfig {
     public static final ForgeConfigSpec.ConfigValue<String> BASE_URL;
     public static final ForgeConfigSpec.ConfigValue<String> MODEL;
     public static final ForgeConfigSpec.IntValue MAX_STEPS;
+    public static final ForgeConfigSpec.IntValue MAX_QUERIES;
     public static final ForgeConfigSpec.IntValue MAX_TOKENS;
     public static final ForgeConfigSpec.DoubleValue TEMPERATURE;
     public static final ForgeConfigSpec.IntValue REQUEST_TIMEOUT;
+    public static final ForgeConfigSpec.DoubleValue TURN_SPEED;
+    public static final ForgeConfigSpec.IntValue STEP_DELAY;
+    public static final ForgeConfigSpec.BooleanValue MEMORY_ENABLED;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -47,9 +51,16 @@ public final class AgentConfig {
                 .define("baseUrl", "https://api.openai.com/v1");
         MODEL = b.comment("Model name.").define("model", "gpt-4o-mini");
         MAX_STEPS = b.comment("Hard cap on model calls per run.").defineInRange("maxSteps", 20, 1, 200);
+        MAX_QUERIES = b.comment("Read-only queries allowed per model step.").defineInRange("maxQueriesPerStep", 6, 1, 32);
         MAX_TOKENS = b.comment("max_tokens per request.").defineInRange("maxTokens", 700, 64, 8192);
         TEMPERATURE = b.comment("Sampling temperature.").defineInRange("temperature", 0.2, 0.0, 2.0);
         REQUEST_TIMEOUT = b.comment("Per-request timeout in seconds.").defineInRange("timeoutSeconds", 60, 5, 300);
+        b.pop();
+
+        b.comment("Human-like pacing. Lower turn speed looks less robotic and reduces instant 180s.").push("agent");
+        TURN_SPEED = b.comment("Max camera rotation per tick, in degrees.").defineInRange("turnSpeed", 18.0, 2.0, 90.0);
+        STEP_DELAY = b.comment("Pause between model steps, in milliseconds.").defineInRange("stepDelayMs", 250, 0, 3000);
+        MEMORY_ENABLED = b.comment("Persist facts and lessons per world.").define("memory", true);
         b.pop();
 
         b.comment("Action permissions. Turn off anything you do not want an agent to do.").push("permissions");
