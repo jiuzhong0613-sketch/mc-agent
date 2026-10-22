@@ -275,7 +275,9 @@ public final class MemoryStore {
                 if (server != null && server.ip != null && !server.ip.isBlank()) {
                     return "mp_" + sanitize(server.ip);
                 }
-                String name = mc.level != null ? mc.level.getLevelData().getLevelName() : "unknown";
+                String name = mc.getSingleplayerServer() != null
+                        ? mc.getSingleplayerServer().getWorldData().getLevelName()
+                        : (mc.level != null ? mc.level.dimension().location().getPath() : "unknown");
                 return "sp_" + sanitize(name);
             }, 1500);
         } catch (Exception e) {
