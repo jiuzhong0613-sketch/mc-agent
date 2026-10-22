@@ -82,7 +82,7 @@ public final class Observation {
         return o;
     }
 
-    private static JsonArray inventory(LocalPlayer p) {
+    private static JsonObject inventory(LocalPlayer p) {
         JsonArray arr = new JsonArray();
         var inv = p.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {

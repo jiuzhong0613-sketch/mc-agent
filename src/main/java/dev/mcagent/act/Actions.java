@@ -473,7 +473,7 @@ public final class Actions {
             if (message.length() > 256) {
                 throw new IllegalArgumentException("message too long");
             }
-            mc.player.chat(message);
+            mc.player.connection.sendChat(message);
             return done();
         }
     }
