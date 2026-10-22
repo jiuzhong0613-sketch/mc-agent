@@ -96,6 +96,19 @@ public final class AgentRuntime {
         return queue.lastResult();
     }
 
+    public boolean awaitResult(String id, long timeoutMs) throws InterruptedException {
+        return queue.awaitResult(id, timeoutMs);
+    }
+
+    public JsonObject resultFor(String id) {
+        return queue.resultFor(id);
+    }
+
+    public void cancelActions() {
+        Minecraft mc = Minecraft.getInstance();
+        mc.execute(() -> queue.cancel(mc));
+    }
+
     public void addEvent(String type, String text) {
         Minecraft mc = Minecraft.getInstance();
         if (!mc.isSameThread()) {

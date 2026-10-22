@@ -86,6 +86,7 @@ public final class ActionQueue {
         lastResult = out;
         current = null;
         Actions.releaseKeys(Minecraft.getInstance());
+        notifyAll();
     }
 
     public synchronized JsonObject cancel(Minecraft mc) {
@@ -105,6 +106,7 @@ public final class ActionQueue {
         lastResult.addProperty("error", "cancelled");
         current = null;
         Actions.releaseKeys(mc);
+        notifyAll();
         out.addProperty("ok", true);
         out.addProperty("cancelled", entry.id);
         return out;
@@ -112,6 +114,29 @@ public final class ActionQueue {
 
     public synchronized JsonObject lastResult() {
         return lastResult;
+    }
+
+    public synchronized boolean awaitResult(String id, long timeoutMs) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (true) {
+            if (lastResult != null && lastResult.has("id")
+                    && id.equals(lastResult.get("id").getAsString())) {
+                return true;
+            }
+            long left = deadline - System.currentTimeMillis();
+            if (left <= 0) {
+                return false;
+            }
+            wait(Math.min(left, 250));
+        }
+    }
+
+    public synchronized JsonObject resultFor(String id) {
+        if (lastResult != null && lastResult.has("id")
+                && id.equals(lastResult.get("id").getAsString())) {
+            return lastResult;
+        }
+        return null;
     }
 
     public synchronized int size() {

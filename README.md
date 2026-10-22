@@ -26,25 +26,31 @@ Early. The first platform is **Minecraft 1.20.1 + Forge 47.x**, client side
 only. Singleplayer and multiplayer both work, because everything happens in
 your own client.
 
-Planned: Fabric, 1.21.x, a skill layer (pathfinding, crafting), and an optional
-reference agent. See [docs/PORTING.md](docs/PORTING.md) for how new platforms
-plug in.
+The mod ships a **built-in agent**: configure a hosted API key, run
+`/agent start "chop ten logs"`, and the loop drives the player. There is no
+local-model mode; only hosted OpenAI-compatible APIs are accepted.
+See [docs/LLM.md](docs/LLM.md).
 
 ## Install
 
 1. Install Minecraft 1.20.1 with Forge 47.x.
 2. Drop `mcagent-0.1.0.jar` into `.minecraft/mods`.
 3. Launch the game and enter a world.
-4. The bridge starts on `http://127.0.0.1:25580`.
+4. Set an API key (see [docs/LLM.md](docs/LLM.md)), then run `/agent start "chop ten logs"`.
 
 Config lives in `config/mcagent-client.toml` (created on first launch, edit
 while the game is closed).
 
 ```toml
 [bridge]
-    enabled = true
+    enabled = false      # opt-in local HTTP bridge for external agents
     port = 25580
-    token = ""          # optional; if set, send X-McAgent-Token
+    token = ""           # optional; if set, send X-McAgent-Token
+
+[llm]
+    baseUrl = "https://api.openai.com/v1"   # hosted only; local is rejected
+    model = "gpt-4o-mini"
+    maxSteps = 20
 
 [permissions]
     allowMove = true
