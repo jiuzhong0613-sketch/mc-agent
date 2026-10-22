@@ -210,7 +210,9 @@ client tick ──> AgentRuntime.tick()
 - 动作失败自动补探测（`autoProbe`）：walk_to→route、mine/place→block、attack→entities；
 - 每世界记忆文件：facts / lessons / skills / episodes，原子写、上限、按关键词+置信度+新近度检索；
 - `remember` / `recall` 工具，启动时自动注入最多 900 字记忆摘要；
-- `done` 可带 `lesson`，下一次运行生效；
+- ~B~done~B~ 可带 ~B~lesson~B~，下一次运行生效；
+- 成功序列（2–12 步）可存为可执行技能，~B~run_skill~B~ 重放，锚点坐标可偏移；
+- 失败收尾自动反思，最多写 2 条 lesson（~B~reflectOnFailure~B~ 控制）；
 - 拟人化：转向速度 18°/tick、步间 250ms，`look` / `look_at` 需要多 tick 完成。
 
 ### 6.10 构建与 CI

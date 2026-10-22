@@ -12,10 +12,12 @@ import dev.mcagent.memory.MemoryTools;
 import dev.mcagent.query.AutoProbe;
 import dev.mcagent.query.QueryRegistry;
 import dev.mcagent.query.QueryTools;
+import dev.mcagent.skill.SkillRunner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,12 +25,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Built-in agent: observation -> hosted LLM -> tool call -> action -> repeat.
  *
- * Tools are split into read-only queries, memory operations and world actions.
- * Failed actions automatically trigger a follow-up probe.
+ * Tools are read-only queries, memory operations, executable skills and world
+ * actions. Successful runs can be saved as skills; failed runs are reflected on.
  */
 public final class AgentLoop {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final AgentLoop INSTANCE = new AgentLoop();
+    private static final int MAX_SKILL_STEPS = 12;
     private static final String SYSTEM = """
             You play Minecraft by calling tools.
             Rules:
@@ -38,10 +41,10 @@ public final class AgentLoop {
             - Before walking anywhere, call query_route. Do not assume terrain is passable.
             - Interactions need to be within about 4.5 blocks; walk closer first.
             - If an action fails, read the autoProbe field instead of retrying blindly.
-            - Use remember for durable facts (resource locations, hazards, landmarks) and lessons.
-            - Use recall before exploring an area you may have seen before.
+            - Use remember for durable facts and lessons.
+            - Use list_skills before long repetitive work; run_skill replays a stored sequence.
+            - When you finish a repeatable task, pass a skill name to done so the sequence is saved.
             - If an action fails twice, change the approach or call done with the reason.
-            - Call done when the goal is reached or clearly impossible. Include a lesson when you learned something.
             - Reply with tool calls only, no prose.
             """;
 
@@ -102,6 +105,9 @@ public final class AgentLoop {
 
     private void loop() {
         JsonArray messages = new JsonArray();
+        JsonArray transcript = new JsonArray();
+        JsonArray runSteps = new JsonArray();
+        boolean usedSkill = false;
         messages.add(message("system", SYSTEM));
         try {
             messages.add(message("user", "Goal: " + goal
@@ -110,7 +116,7 @@ public final class AgentLoop {
             while (running.get()) {
                 int max = AgentConfig.MAX_STEPS.get();
                 if (step >= max) {
-                    finish("step limit " + max + " reached", true);
+                    finish("step limit " + max + " reached", false, transcript);
                     return;
                 }
                 step++;
@@ -119,7 +125,7 @@ public final class AgentLoop {
                 messages.add(reply);
                 JsonArray calls = toolCalls(reply);
                 if (calls.isEmpty()) {
-                    finish(text(reply), true);
+                    finish(text(reply), true, transcript);
                     return;
                 }
                 for (JsonElement element : calls) {
@@ -130,7 +136,9 @@ public final class AgentLoop {
                     JsonObject arguments = arguments(function);
 
                     if (name.startsWith("query_")) {
-                        messages.add(toolMessage(callId, query(name, arguments).toString()));
+                        JsonObject answer = query(name, arguments);
+                        transcript.add(transcriptEntry(name, answer));
+                        messages.add(toolMessage(callId, answer.toString()));
                         continue;
                     }
                     if ("remember".equals(name)) {
@@ -141,18 +149,37 @@ public final class AgentLoop {
                         messages.add(toolMessage(callId, recall(arguments).toString()));
                         continue;
                     }
+                    if ("list_skills".equals(name)) {
+                        JsonObject out = new JsonObject();
+                        out.addProperty("ok", true);
+                        out.add("skills", memory.listSkills());
+                        messages.add(toolMessage(callId, out.toString()));
+                        continue;
+                    }
+                    if ("run_skill".equals(name)) {
+                        JsonObject result = runSkill(arguments);
+                        usedSkill = true;
+                        transcript.add(transcriptEntry(name, result));
+                        messages.add(toolMessage(callId, result.toString()));
+                        continue;
+                    }
                     if ("done".equals(name)) {
                         if (arguments.has("lesson") && !arguments.get("lesson").getAsString().isBlank()) {
                             memory.remember("lesson", arguments.get("lesson").getAsString(), goal);
                         }
-                        finish(arguments.has("summary") ? arguments.get("summary").getAsString() : "done", true);
+                        saveSkill(arguments, runSteps, usedSkill);
+                        finish(arguments.has("summary") ? arguments.get("summary").getAsString() : "done", true, transcript);
                         return;
                     }
 
                     lastAction = name;
                     JsonObject result = execute(name, arguments);
                     memory.recordEpisode(name, arguments, result);
-                    if (!result.has("ok") || !result.get("ok").getAsBoolean()) {
+                    transcript.add(transcriptEntry(name, result));
+                    boolean ok = result.has("ok") && result.get("ok").getAsBoolean();
+                    if (ok) {
+                        addSkillStep(runSteps, name, arguments);
+                    } else {
                         JsonObject probe = AutoProbe.forFailure(name, arguments);
                         if (probe != null) {
                             result.add("autoProbe", probe);
@@ -168,14 +195,81 @@ public final class AgentLoop {
                 }
             }
         } catch (LlmClient.LlmException e) {
-            finish(friendly(e), false);
+            finish(friendly(e), false, transcript);
         } catch (Exception e) {
             LOGGER.warn("[mcagent] agent loop failed", e);
-            finish("error: " + e.getClass().getSimpleName() + ": " + e.getMessage(), false);
+            finish("error: " + e.getClass().getSimpleName() + ": " + e.getMessage(), false, transcript);
         } finally {
             running.set(false);
             memory.flush();
         }
+    }
+
+    private void saveSkill(JsonObject arguments, JsonArray runSteps, boolean usedSkill) {
+        if (usedSkill || runSteps.size() < 2 || runSteps.size() > MAX_SKILL_STEPS) {
+            return;
+        }
+        String name;
+        if (arguments.has("skill") && !arguments.get("skill").getAsString().isBlank()) {
+            name = slug(arguments.get("skill").getAsString());
+        } else {
+            name = "skill_" + (System.currentTimeMillis() / 1000L % 100000L);
+        }
+        memory.saveSkill(name, runSteps, goal);
+        tell("saved skill " + name + " (" + runSteps.size() + " steps)");
+    }
+
+    private static void addSkillStep(JsonArray runSteps, String name, JsonObject arguments) {
+        if (runSteps.size() >= MAX_SKILL_STEPS || !isWorldAction(name)) {
+            return;
+        }
+        JsonObject step = new JsonObject();
+        step.addProperty("action", name);
+        JsonObject args = arguments.deepCopy();
+        args.remove("type");
+        step.add("args", args);
+        runSteps.add(step);
+    }
+
+    private static boolean isWorldAction(String name) {
+        return !name.startsWith("query_")
+                && !"remember".equals(name)
+                && !"recall".equals(name)
+                && !"done".equals(name)
+                && !"run_skill".equals(name)
+                && !"list_skills".equals(name);
+    }
+
+    private static String slug(String raw) {
+        String clean = raw.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_-]+", "_");
+        return clean.length() > 32 ? clean.substring(0, 32) : (clean.isEmpty() ? "skill" : clean);
+    }
+
+    private JsonObject runSkill(JsonObject arguments) {
+        String name = arguments.has("name") ? arguments.get("name").getAsString() : "";
+        JsonObject skill = memory.findSkill(name);
+        if (skill == null) {
+            return error("unknown skill: " + name);
+        }
+        if (!skill.has("steps")) {
+            return error("skill has no stored steps (text-only entry)");
+        }
+        JsonObject target = arguments.has("x") && arguments.has("y") && arguments.has("z")
+                ? arguments : null;
+        JsonObject result = SkillRunner.run(skill, target);
+        memory.noteSkill(name, result.has("ok") && result.get("ok").getAsBoolean());
+        return result;
+    }
+
+    private static JsonObject transcriptEntry(String action, JsonObject result) {
+        JsonObject entry = new JsonObject();
+        entry.addProperty("action", action);
+        boolean ok = result.has("ok") && result.get("ok").getAsBoolean();
+        entry.addProperty("ok", ok);
+        if (!ok && result.has("error")) {
+            entry.addProperty("error", result.get("error").getAsString());
+        }
+        return entry;
     }
 
     private static JsonObject query(String name, JsonObject arguments) {
@@ -302,7 +396,7 @@ public final class AgentLoop {
         return e.getMessage();
     }
 
-    private void finish(String reason, boolean ok) {
+    private void finish(String reason, boolean ok, JsonArray transcript) {
         running.set(false);
         if (ok) {
             lastError = "";
@@ -310,6 +404,7 @@ public final class AgentLoop {
         } else {
             lastError = reason;
             tell("stopped: " + reason);
+            Reflector.reflect(goal, reason, transcript);
         }
         memory.flush();
         LOGGER.info("[mcagent] agent finished: {}", reason);

@@ -21,6 +21,14 @@ public final class MemoryTools {
                 """
                 {"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":12}},"required":["query"]}
                 """));
+        tools.add(fn("run_skill", "Replay a stored executable skill. Pass x,y,z to shift an anchored skill to a new target.",
+                """
+                {"type":"object","properties":{"name":{"type":"string"},"x":{"type":"number"},"y":{"type":"number"},"z":{"type":"number"}},"required":["name"]}
+                """));
+        tools.add(fn("list_skills", "List stored skills with step counts and success/failure stats.",
+                """
+                {"type":"object","properties":{}}
+                """));
         return tools;
     }
 

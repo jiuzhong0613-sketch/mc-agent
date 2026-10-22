@@ -88,6 +88,48 @@ memory <-- reflection <-- compare with expectation
 This is retrieval + reflection, not model training. There is no fine-tuning, no
 gradient update and no self-modifying code. Saying otherwise would be dishonest.
 
+## 3.1 Executable skills
+
+A successful run records its world actions. With 2–12 steps and no skill replay
+involved, `done.skill` turns that sequence into a replayable macro:
+
+```json
+{
+  "text": "chop_tree",
+  "anchor": {"x": 120, "y": 68, "z": -33},
+  "steps": [
+    {"action": "look_at", "args": {"x": 120, "y": 69, "z": -33}},
+    {"action": "mine", "args": {"x": 120, "y": 68, "z": -33}}
+  ],
+  "ok": 3, "fail": 1
+}
+```
+
+- `anchor` is the first step with coordinates; `run_skill(name, x, y, z)` shifts every
+  coordinate by the delta, so the same macro works at a new target;
+- replay goes through the normal action queue, so permissions, reach checks,
+  timeouts and key release all still apply;
+- the first failed step aborts the replay and returns `failedStep`,
+  `failedAction` and the per-step results;
+- `list_skills` shows name, step count, ok/fail and whether it is executable;
+- old text-only entries report `executable=false` and cannot be replayed.
+
+## 3.2 Reflection
+
+When a run ends in failure (error, step limit, exception), the framework makes
+one extra request with no tools:
+
+```json
+{"lessons":[{"text":"walk_to through water fails; route around water first","tags":"walk_to,water"}]}
+```
+
+- controlled by `agent.reflectOnFailure` (default true);
+- input: goal, failure reason, last 10 steps;
+- at most two lessons, stored as `kind=lesson` with the goal as tags;
+- duplicate lessons bump confidence instead of creating a second entry;
+- network/auth errors are ignored silently; this never blocks the main loop;
+- costs one extra request per failed run, not counted in `maxSteps`.
+
 ## 4. Human-like behaviour
 
 | Knob | Default | Effect |

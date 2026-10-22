@@ -29,6 +29,7 @@ public final class AgentConfig {
     public static final ForgeConfigSpec.DoubleValue TURN_SPEED;
     public static final ForgeConfigSpec.IntValue STEP_DELAY;
     public static final ForgeConfigSpec.BooleanValue MEMORY_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue REFLECT;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -61,6 +62,7 @@ public final class AgentConfig {
         TURN_SPEED = b.comment("Max camera rotation per tick, in degrees.").defineInRange("turnSpeed", 18.0, 2.0, 90.0);
         STEP_DELAY = b.comment("Pause between model steps, in milliseconds.").defineInRange("stepDelayMs", 250, 0, 3000);
         MEMORY_ENABLED = b.comment("Persist facts and lessons per world.").define("memory", true);
+        REFLECT = b.comment("After a failed run, ask the model for one or two lessons and store them.").define("reflectOnFailure", true);
         b.pop();
 
         b.comment("Action permissions. Turn off anything you do not want an agent to do.").push("permissions");

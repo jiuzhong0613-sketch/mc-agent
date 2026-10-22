@@ -184,6 +184,92 @@ public final class MemoryStore {
         }
     }
 
+    public void saveSkill(String name, JsonArray steps, String goal) {
+        if (!AgentConfig.MEMORY_ENABLED.get() || name == null || name.isBlank()
+                || steps == null || steps.size() < 2) {
+            return;
+        }
+        synchronized (lock) {
+            JsonArray skills = root().getAsJsonArray("skills");
+            JsonObject entry = null;
+            for (JsonElement element : skills) {
+                JsonObject candidate = element.getAsJsonObject();
+                if (candidate.has("text") && candidate.get("text").getAsString().equalsIgnoreCase(name)) {
+                    entry = candidate;
+                    break;
+                }
+            }
+            if (entry == null) {
+                entry = new JsonObject();
+                entry.addProperty("id", nextId++);
+                entry.addProperty("text", name);
+                entry.add("tags", tags(goal));
+                entry.addProperty("created", now());
+                entry.addProperty("ok", 0);
+                entry.addProperty("fail", 0);
+                skills.add(entry);
+            }
+            entry.add("steps", steps.deepCopy());
+            JsonObject anchor = anchorOf(steps);
+            if (anchor != null) {
+                entry.add("anchor", anchor);
+            }
+            entry.addProperty("confidence", Math.min(1.0,
+                    (entry.has("confidence") ? entry.get("confidence").getAsDouble() : 0.5) + 0.05));
+            entry.addProperty("updated", now());
+            trim(skills, MAX_SKILLS, true);
+            dirty = true;
+        }
+    }
+
+    public JsonObject findSkill(String name) {
+        synchronized (lock) {
+            for (JsonElement element : root().getAsJsonArray("skills")) {
+                JsonObject entry = element.getAsJsonObject();
+                if (entry.has("text") && entry.get("text").getAsString().equalsIgnoreCase(name)) {
+                    return entry.deepCopy();
+                }
+            }
+            return null;
+        }
+    }
+
+    public JsonArray listSkills() {
+        synchronized (lock) {
+            JsonArray out = new JsonArray();
+            for (JsonElement element : root().getAsJsonArray("skills")) {
+                JsonObject entry = element.getAsJsonObject();
+                if (!entry.has("text")) {
+                    continue;
+                }
+                JsonObject o = new JsonObject();
+                o.addProperty("name", entry.get("text").getAsString());
+                o.addProperty("steps", entry.has("steps") && entry.get("steps").isJsonArray()
+                        ? entry.getAsJsonArray("steps").size() : 0);
+                o.addProperty("ok", entry.has("ok") ? entry.get("ok").getAsInt() : 0);
+                o.addProperty("fail", entry.has("fail") ? entry.get("fail").getAsInt() : 0);
+                o.addProperty("executable", entry.has("steps"));
+                out.add(o);
+            }
+            return out;
+        }
+    }
+
+    private static JsonObject anchorOf(JsonArray steps) {
+        for (JsonElement element : steps) {
+            JsonObject step = element.getAsJsonObject();
+            JsonObject args = step.has("args") ? step.getAsJsonObject("args") : null;
+            if (args != null && args.has("x") && args.has("y") && args.has("z")) {
+                JsonObject anchor = new JsonObject();
+                anchor.addProperty("x", args.get("x").getAsDouble());
+                anchor.addProperty("y", args.get("y").getAsDouble());
+                anchor.addProperty("z", args.get("z").getAsDouble());
+                return anchor;
+            }
+        }
+        return null;
+    }
+
     public void flushIfDirty() {
         synchronized (lock) {
             if (!dirty || System.currentTimeMillis() - lastFlush < FLUSH_INTERVAL_MS) {

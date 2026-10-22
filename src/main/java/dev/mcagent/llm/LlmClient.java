@@ -45,8 +45,10 @@ public final class LlmClient {
         JsonObject body = new JsonObject();
         body.addProperty("model", AgentConfig.MODEL.get());
         body.add("messages", messages);
-        body.add("tools", tools);
-        body.addProperty("tool_choice", "auto");
+        if (tools != null) {
+            body.add("tools", tools);
+            body.addProperty("tool_choice", "auto");
+        }
         body.addProperty("temperature", AgentConfig.TEMPERATURE.get());
         body.addProperty("max_tokens", AgentConfig.MAX_TOKENS.get());
         body.addProperty("stream", false);
