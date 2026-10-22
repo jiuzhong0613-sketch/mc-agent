@@ -2,7 +2,7 @@
 
 > 最后更新：2026-10-22 11:10（UTC+8）
 > 仓库：https://github.com/jiuzhong0613-sketch/mc-agent
-> 远端 main：见仓库最新提交（本轮主动感知/记忆改动待 CI 验证）
+> 远端 main：`c21502a`（三系统 CI 通过）
 > 版本：`0.1.0`，协议 `mc-agent/1`
 > 状态：**可编译、未实机验证**
 
