@@ -330,4 +330,4 @@ src/test/java/dev/mcagent/path/
 | 2026-10-22 | 0.1.0：观测、动作、查询、记忆、技能、反思 | cb25e35 | 三系统通过 |
 | 2026-10-23 | 包命名改为 `mc_agent-<mc>-forge-<ver>.jar` | caf6f6f | Linux/macOS 通过，Windows 待确认 |
 | 2026-10-23 | 0.2.0：契约层 + Planner/Replanner + mine_n/goto + plan 命令 | 341813a | 三系统通过（15 单测） |
-| 2026-10-23 | 0.3.0：BlockGrid/MoveRules/A*、query_path、path_to、goto 接入 | 待填 | 待填 |
+| 2026-10-23 | 0.3.0：BlockGrid/MoveRules/A*、query_path、path_to、goto 接入 | 1b3cf04 | 三系统通过（23 单测） |
