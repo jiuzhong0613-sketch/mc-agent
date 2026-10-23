@@ -106,7 +106,7 @@ public final class Planner {
                 }
                 default -> out.add(task.id + ": unknown type " + task.type);
             }
-            if (task.verify == null || task.verify.isEmpty()) {
+            if (task.verify == null || task.verify.size() == 0) {
                 out.add(task.id + ": missing verify predicate");
             }
         }

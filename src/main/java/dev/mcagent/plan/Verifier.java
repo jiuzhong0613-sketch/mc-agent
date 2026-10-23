@@ -35,7 +35,7 @@ public final class Verifier {
     }
 
     public static Result verify(JsonObject spec, FactSource facts, JsonObject lastResult) {
-        if (spec == null || spec.isEmpty()) {
+        if (spec == null || spec.size() == 0) {
             return new Result(true, "none", "", "");
         }
         String type = spec.has("type") ? spec.get("type").getAsString() : "";

@@ -124,12 +124,13 @@ public final class PlanRunner {
     private void execute(String goal, TaskPlan initial) throws Exception {
         TaskPlan current = initial;
         for (int attempt = 0; attempt <= MAX_REPLANS; attempt++) {
-            PlanResult result = new PlanExecutor(port, facts, current.budget, node -> {
-                saveQuietly(current);
+            final TaskPlan running = current;
+            PlanResult result = new PlanExecutor(port, facts, running.budget, node -> {
+                saveQuietly(running);
                 if (node.status == TaskNode.Status.FAILED) {
                     tell("task failed: " + node.id + " " + (node.error == null ? "" : node.error));
                 }
-            }).execute(current);
+            }).execute(running);
             lastResult = result;
             store().saveResult(planId, result);
             if (result.ok) {
