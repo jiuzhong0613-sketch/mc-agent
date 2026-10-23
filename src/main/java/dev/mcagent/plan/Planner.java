@@ -17,11 +17,11 @@ import java.util.Set;
  */
 public final class Planner {
     private static final Set<String> ACTIONS = Set.of(
-            "look", "look_at", "move", "walk_to", "mine", "place", "use", "attack",
+            "look", "look_at", "move", "walk_to", "path_to", "mine", "place", "use", "attack",
             "select_slot", "chat", "drop", "respawn", "wait");
     private static final Set<String> QUERIES = Set.of(
             "query_block", "query_scan", "query_entities", "query_inventory", "query_raycast",
-            "query_can_stand", "query_surface", "query_route", "query_env");
+            "query_can_stand", "query_surface", "query_route", "query_env", "query_path");
     private static final Set<String> MACROS = Set.of("mine_n", "goto");
 
     private static final String SYSTEM = """
@@ -29,14 +29,15 @@ public final class Planner {
             The executor is deterministic and can only do the capabilities below.
 
             Allowed task types: action, query, skill, macro, assert.
-            Actions: look, look_at, move, walk_to, mine, place, use, attack, select_slot, chat, drop, respawn, wait.
-            Queries: query_block, query_scan, query_entities, query_inventory, query_raycast, query_can_stand, query_surface, query_route, query_env.
+            Actions: look, look_at, move, walk_to, path_to, mine, place, use, attack, select_slot, chat, drop, respawn, wait.
+            Queries: query_block, query_scan, query_entities, query_inventory, query_raycast, query_can_stand, query_surface, query_route, query_env, query_path.
             Macros: mine_n {block, count, radius}, goto {x, y, z, tolerance}.
             Skills: only names listed in the user message.
 
             Hard limits:
             - no GUI, no crafting, no chests, no villagers, no doors, no beds;
-            - no pathfinding: walk_to is a straight line that fails on water, cliffs and walls;
+            - path_to uses A* around walls, water and small gaps; walk_to is a straight line and should only be used for very short moves;
+            - no mining or placing to open a route, no doors, ladders, swimming, boats or portals;
             - interactions must be within 4.5 blocks;
             - block scan radius is 5 by default.
 

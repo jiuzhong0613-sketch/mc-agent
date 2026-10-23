@@ -19,29 +19,13 @@ public final class GotoMacro {
         double z = args.get("z").getAsDouble();
         double tolerance = args.has("tolerance") ? args.get("tolerance").getAsDouble() : 1.0;
 
-        JsonObject routeArgs = new JsonObject();
-        routeArgs.addProperty("x", x);
-        routeArgs.addProperty("y", y);
-        routeArgs.addProperty("z", z);
-        try {
-            JsonObject route = MacroSupport.query("query_route", routeArgs);
-            String verdict = route.has("verdict") ? route.get("verdict").getAsString() : "unknown";
-            if (!"clear".equals(verdict)) {
-                JsonObject out = MacroSupport.error("route " + verdict);
-                out.add("route", route);
-                return out;
-            }
-        } catch (Exception e) {
-            return MacroSupport.error("route failed: " + e.getMessage());
-        }
-
         try {
             JsonObject walkArgs = new JsonObject();
             walkArgs.addProperty("x", x);
             walkArgs.addProperty("y", y);
             walkArgs.addProperty("z", z);
             walkArgs.addProperty("tolerance", tolerance);
-            JsonObject walk = MacroSupport.action("walk_to", walkArgs);
+            JsonObject walk = MacroSupport.action("path_to", walkArgs);
             if (!MacroSupport.ok(walk)) {
                 return walk;
             }

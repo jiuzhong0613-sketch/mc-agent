@@ -49,6 +49,10 @@ public final class QueryTools {
                 """
                 {"type":"object","properties":{}}
                 """));
+        tools.add(fn("query_path", "Run A* path planning and report reachability, length and reason.",
+                """
+                {"type":"object","properties":{"x":{"type":"integer"},"y":{"type":"integer"},"z":{"type":"integer"},"radius":{"type":"integer","minimum":8,"maximum":40}},"required":["x","y","z"]}
+                """));
         return tools;
     }
 

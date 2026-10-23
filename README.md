@@ -34,7 +34,7 @@ See [docs/LLM.md](docs/LLM.md).
 ## Install
 
 1. Install Minecraft 1.20.1 with Forge 47.x.
-2. Drop `mc_agent-1.20.1-forge-0.2.0.jar` into `.minecraft/mods`.
+2. Drop `mc_agent-1.20.1-forge-0.3.0.jar` into `.minecraft/mods`.
 3. Launch the game and enter a world.
 4. Set an API key (see [docs/LLM.md](docs/LLM.md)), then run `/agent start "chop ten logs"`.
 

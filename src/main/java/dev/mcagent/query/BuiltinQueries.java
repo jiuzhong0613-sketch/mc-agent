@@ -3,6 +3,8 @@ package dev.mcagent.query;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.mcagent.bridge.Json;
+import dev.mcagent.path.Path;
+import dev.mcagent.path.PathService;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -55,6 +57,7 @@ public final class BuiltinQueries {
             case "query_surface" -> surface(mc, args);
             case "query_route" -> route(mc, args);
             case "query_env" -> env(mc);
+            case "query_path" -> pathQuery(args);
             default -> throw new IllegalArgumentException("unknown query: " + name);
         };
     }
@@ -306,6 +309,40 @@ public final class BuiltinQueries {
         out.addProperty("targetFloorSolid", endFloor.isSolid());
         out.addProperty("targetFeetFree", !mc.level.getBlockState(end).isSolid());
         out.addProperty("targetHeadFree", !mc.level.getBlockState(end.above()).isSolid());
+        return out;
+    }
+
+    private static JsonObject pathQuery(JsonObject args) {
+        JsonObject out = new JsonObject();
+        out.addProperty("answered", true);
+        if (!args.has("x") || !args.has("y") || !args.has("z")) {
+            out.addProperty("ok", false);
+            out.addProperty("error", "query_path needs x, y, z");
+            return out;
+        }
+        int radius = Math.min(40, args.has("radius") ? args.get("radius").getAsInt() : 32);
+        try {
+            Path path = PathService.planNow(
+                    args.get("x").getAsInt(), args.get("y").getAsInt(), args.get("z").getAsInt(), radius);
+            out.addProperty("reachable", path.reachable());
+            out.addProperty("status", path.status.name());
+            out.addProperty("length", path.nodes.size());
+            out.addProperty("reason", path.reason);
+            out.addProperty("expanded", path.expanded);
+            JsonArray sample = new JsonArray();
+            for (int i = 0; i < Math.min(path.nodes.size(), 8); i++) {
+                int[] node = path.nodes.get(i);
+                JsonObject p = new JsonObject();
+                p.addProperty("x", node[0]);
+                p.addProperty("y", node[1]);
+                p.addProperty("z", node[2]);
+                sample.add(p);
+            }
+            out.add("sample", sample);
+        } catch (Exception e) {
+            out.addProperty("ok", false);
+            out.addProperty("error", e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
         return out;
     }
 

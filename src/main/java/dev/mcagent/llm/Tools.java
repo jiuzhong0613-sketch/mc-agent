@@ -21,6 +21,10 @@ public final class Tools {
                 """
                 {"type":"object","properties":{"forward":{"type":"number","description":"-1..1"},"strafe":{"type":"number","description":"-1..1, positive is right"},"jump":{"type":"boolean"},"sneak":{"type":"boolean"},"sprint":{"type":"boolean"},"ticks":{"type":"integer","minimum":1,"maximum":400}},"required":["ticks"]}
                 """));
+        tools.add(fn("path_to", "Plan with A* around walls and water, then follow the path.",
+                """
+                {"type":"object","properties":{"x":{"type":"integer"},"y":{"type":"integer"},"z":{"type":"integer"},"tolerance":{"type":"number","description":"default 0.8"},"radius":{"type":"integer","minimum":8,"maximum":48}},"required":["x","y","z"]}
+                """));
         tools.add(fn("walk_to", "Walk straight toward a position. Naive steering, not pathfinding.",
                 """
                 {"type":"object","properties":{"x":{"type":"number"},"y":{"type":"number"},"z":{"type":"number"},"tolerance":{"type":"number","description":"default 0.8"},"sprint":{"type":"boolean"}},"required":["x","y","z"]}

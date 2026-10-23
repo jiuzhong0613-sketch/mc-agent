@@ -33,6 +33,7 @@ public final class Actions {
             case "look_at" -> new LookAt(req);
             case "move" -> new Move(req);
             case "walk_to" -> new WalkTo(req);
+            case "path_to" -> new PathFollowerAction(req);
             case "mine" -> new Mine(req);
             case "place" -> new Place(req);
             case "use" -> new Use(req);

@@ -39,6 +39,7 @@ public final class BridgeServer {
                 "obs.player.v1", "obs.inventory.v1", "obs.blocks.v1", "obs.entities.v1",
                 "act.look.v1", "act.move.v1", "act.walk_to.v1", "act.mine.v1", "act.place.v1",
                 "act.use.v1", "act.attack.v1", "act.chat.v1", "act.select_slot.v1", "act.drop.v1",
+                "act.path_to.v1", "query.path.v1",
                 "query.block.v1", "query.scan.v1", "query.entities.v1", "query.inventory.v1",
                 "query.raycast.v1", "query.can_stand.v1", "query.surface.v1", "query.route.v1", "query.env.v1"
         }) {
