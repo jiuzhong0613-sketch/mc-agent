@@ -93,6 +93,10 @@ public final class AgentLoop {
         tell(was ? "stopped" : "not running");
     }
 
+    public boolean isRunning() {
+        return running.get();
+    }
+
     public String status() {
         return "running=" + running.get()
                 + " step=" + step + "/" + AgentConfig.MAX_STEPS.get()
