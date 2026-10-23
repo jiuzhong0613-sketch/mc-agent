@@ -72,6 +72,7 @@ class PlanExecutorTest {
     @Test
     void retriesOnceThenSucceeds() throws Exception {
         FakeFacts facts = new FakeFacts();
+        facts.near = true;
         FakePort port = new FakePort();
         port.failFirst = 1;
         TaskPlan p = plan(
@@ -79,7 +80,7 @@ class PlanExecutorTest {
                 {"id":"a","type":"action","action":"mine","args":{},"retries":1,"verify":{"type":"action_ok"}}
                 """,
                 """
-                {"type":"action_ok"}
+                {"type":"position_near","x":0,"y":0,"z":0,"tolerance":2}
                 """);
         PlanResult r = new PlanExecutor(port, facts, p.budget, null).execute(p);
         assertTrue(r.ok, r.error);
