@@ -105,7 +105,38 @@ public final class TaskPlan {
             }
         }
         detectCycle(tasks);
+        restoreState(root, tasks);
         return new TaskPlan(version, goal, success, Budget.from(root), tasks, root);
+    }
+
+    private static void restoreState(JsonObject root, List<TaskNode> tasks) {
+        if (!root.has("taskState") || !root.get("taskState").isJsonArray()) {
+            return;
+        }
+        Map<String, JsonObject> byId = new HashMap<>();
+        for (JsonElement element : root.getAsJsonArray("taskState")) {
+            if (element.isJsonObject()) {
+                JsonObject state = element.getAsJsonObject();
+                if (state.has("id")) {
+                    byId.put(state.get("id").getAsString(), state);
+                }
+            }
+        }
+        for (TaskNode task : tasks) {
+            JsonObject state = byId.get(task.id);
+            if (state == null) {
+                continue;
+            }
+            if (state.has("status")) {
+                try {
+                    task.status = TaskNode.Status.valueOf(state.get("status").getAsString());
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            if (state.has("error")) {
+                task.error = state.get("error").getAsString();
+            }
+        }
     }
 
     private static void detectCycle(List<TaskNode> tasks) throws PlanException {

@@ -3,6 +3,7 @@ package dev.mcagent;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.logging.LogUtils;
 import dev.mcagent.llm.AgentLoop;
+import dev.mcagent.plan.PlanRunner;
 import dev.mcagent.llm.SecretStore;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -51,6 +52,30 @@ public final class McAgentMod {
     public void onRegisterCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("agent")
                 .executes(ctx -> status(ctx.getSource()))
+                .then(Commands.literal("plan")
+                        .executes(ctx -> {
+                            send(ctx.getSource(), PlanRunner.get().show());
+                            return 1;
+                        })
+                        .then(Commands.argument("goal", StringArgumentType.greedyString())
+                                .executes(ctx -> {
+                                    PlanRunner.get().start(StringArgumentType.getString(ctx, "goal"), false);
+                                    return 1;
+                                })))
+                .then(Commands.literal("dry")
+                        .then(Commands.argument("goal", StringArgumentType.greedyString())
+                                .executes(ctx -> {
+                                    PlanRunner.get().start(StringArgumentType.getString(ctx, "goal"), true);
+                                    return 1;
+                                })))
+                .then(Commands.literal("why").executes(ctx -> {
+                    send(ctx.getSource(), PlanRunner.get().why());
+                    return 1;
+                }))
+                .then(Commands.literal("resume").executes(ctx -> {
+                    PlanRunner.get().resume();
+                    return 1;
+                }))
                 .then(Commands.literal("start")
                         .then(Commands.argument("goal", StringArgumentType.greedyString())
                                 .executes(ctx -> {
@@ -59,6 +84,7 @@ public final class McAgentMod {
                                 })))
                 .then(Commands.literal("stop").executes(ctx -> {
                     AgentLoop.get().stop();
+                    PlanRunner.get().stop();
                     return 1;
                 }))
                 .then(Commands.literal("status").executes(ctx -> status(ctx.getSource())))
@@ -69,6 +95,10 @@ public final class McAgentMod {
                                     + "; file " + SecretStore.file()));
                     return 1;
                 })));
+    }
+
+    private static void send(net.minecraft.commands.CommandSourceStack source, String message) {
+        source.sendSystemMessage(Component.literal("[agent] " + message));
     }
 
     private static int status(net.minecraft.commands.CommandSourceStack source) {

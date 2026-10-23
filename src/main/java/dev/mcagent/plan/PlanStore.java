@@ -39,6 +39,23 @@ public final class PlanStore {
         return id;
     }
 
+    public void saveState(String id, TaskPlan plan) throws IOException {
+        Files.createDirectories(dir);
+        Path file = dir.resolve(id + ".json");
+        Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
+        Files.writeString(tmp, plan.toJson().toString(), StandardCharsets.UTF_8);
+        try {
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    public Path latest() throws IOException {
+        List<Path> plans = list();
+        return plans.isEmpty() ? null : plans.get(plans.size() - 1);
+    }
+
     public void saveResult(String id, PlanResult result) throws IOException {
         Path file = dir.resolve(id + ".result.json");
         Files.writeString(file, result.toJson().toString(), StandardCharsets.UTF_8);

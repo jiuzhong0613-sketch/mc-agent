@@ -26,6 +26,9 @@ public final class PlanExecutor {
 
     public PlanResult execute(TaskPlan plan) {
         for (TaskNode node : plan.topological()) {
+            if (node.status == TaskNode.Status.DONE) {
+                continue;
+            }
             if (dependencyFailed(plan, node)) {
                 node.status = TaskNode.Status.SKIPPED;
                 node.error = "dependency failed";

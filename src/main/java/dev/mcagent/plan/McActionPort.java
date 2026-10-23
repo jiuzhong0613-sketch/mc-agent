@@ -5,6 +5,8 @@ import dev.mcagent.AgentRuntime;
 import dev.mcagent.memory.MemoryStore;
 import dev.mcagent.query.QueryRegistry;
 import dev.mcagent.skill.SkillRunner;
+import dev.mcagent.skill.macro.GotoMacro;
+import dev.mcagent.skill.macro.MineNMacro;
 
 public final class McActionPort implements ActionPort {
     @Override
@@ -43,7 +45,11 @@ public final class McActionPort implements ActionPort {
 
     @Override
     public JsonObject runMacro(String name, JsonObject args) {
-        return error("macro not implemented yet: " + name);
+        return switch (name) {
+            case "mine_n" -> MineNMacro.run(args);
+            case "goto" -> GotoMacro.run(args);
+            default -> error("unknown macro: " + name);
+        };
     }
 
     private static JsonObject error(String message) {
