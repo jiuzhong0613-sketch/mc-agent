@@ -55,6 +55,14 @@ class VerifierTest {
     }
 
     @Test
+    void queryOkReadsAnswered() {
+        assertTrue(Verifier.verify(json("{\"type\":\"query_ok\"}"), new FakeFacts(),
+                json("{\"answered\":true}")).ok);
+        assertFalse(Verifier.verify(json("{\"type\":\"query_ok\"}"), new FakeFacts(),
+                json("{\"ok\":false}")).ok);
+    }
+
+    @Test
     void actionOkReadsResult() {
         assertTrue(Verifier.verify(json("{\"type\":\"action_ok\"}"), new FakeFacts(),
                 json("{\"ok\":true}")).ok);

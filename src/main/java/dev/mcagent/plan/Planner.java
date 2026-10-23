@@ -52,6 +52,10 @@ public final class Planner {
             {"version":1,"goal":"...","success":[...],"budget":{"llmCalls":8,"actions":400,"seconds":600},
              "tasks":[{"id":"t1","title":"...","type":"query","tool":"query_scan","args":{},"verify":{...}}]}
 
+            verify.type must be exactly one of:
+            inventory_count, block_at, blocks_count, position_near, entity_near,
+            query_true, query_ok, action_ok, all, any, not.
+
             Verify predicates:
             inventory_count {item,min}; block_at {x,y,z,id}; blocks_count {id,radius,min};
             position_near {x,y,z,tolerance}; entity_near {type,radius,min};
@@ -64,7 +68,16 @@ public final class Planner {
     public TaskPlan plan(String goal) throws Exception {
         String request = "Goal: " + goal + "\n\n" + context(goal)
                 + "\n\nReturn the plan JSON.";
-        return callAndParse(SYSTEM, request, null);
+        TaskPlan plan = callAndParse(SYSTEM, request, null);
+        List<String> warnings = warnings(plan);
+        if (!warnings.isEmpty()) {
+            String repair = request + "\n\nThe previous plan had problems:\n- "
+                    + String.join("\n- ", warnings)
+                    + "\nPrevious plan:\n" + plan.raw
+                    + "\nReturn a corrected plan JSON.";
+            plan = callAndParse(SYSTEM, repair, plan);
+        }
+        return plan;
     }
 
     public TaskPlan replan(String goal, TaskPlan previous, String failedTask,

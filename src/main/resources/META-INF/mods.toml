@@ -5,7 +5,7 @@ issueTrackerURL = "https://github.com/jiuzhong0613-sketch/mc-agent/issues"
 
 [[mods]]
 modId = "mcagent"
-version = "0.3.2"
+version = "0.3.3"
 displayName = "MC Agent"
 authors = "MC Agent contributors"
 description = '''

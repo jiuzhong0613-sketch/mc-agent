@@ -48,6 +48,7 @@ public final class Verifier {
                 case "entity_near" -> entityNear(spec, facts);
                 case "action_ok" -> actionOk(lastResult);
                 case "query_true" -> queryTrue(spec, facts);
+                case "query_ok" -> queryOk(lastResult);
                 case "all" -> combine(spec, facts, lastResult, true);
                 case "any" -> combine(spec, facts, lastResult, false);
                 case "not" -> not(spec, facts, lastResult);
@@ -102,6 +103,14 @@ public final class Verifier {
     private static Result actionOk(JsonObject lastResult) {
         boolean ok = lastResult != null && lastResult.has("ok") && lastResult.get("ok").getAsBoolean();
         return new Result(ok, "action_ok", "ok=true", ok ? "ok" : String.valueOf(lastResult));
+    }
+
+    private static Result queryOk(JsonObject lastResult) {
+        boolean answered = lastResult != null
+                && ((lastResult.has("answered") && lastResult.get("answered").getAsBoolean())
+                || (lastResult.has("ok") && lastResult.get("ok").getAsBoolean()));
+        return new Result(answered, "query_ok", "answered=true",
+                lastResult == null ? "null" : lastResult.toString());
     }
 
     private static Result queryTrue(JsonObject spec, FactSource facts) throws Exception {

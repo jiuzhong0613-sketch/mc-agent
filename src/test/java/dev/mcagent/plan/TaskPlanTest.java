@@ -65,6 +65,43 @@ class TaskPlanTest {
     }
 
     @Test
+    void normalizesMacroWithoutName() throws Exception {
+        TaskPlan p = TaskPlan.parse(plan(
+                """
+                {"id":"t1","type":"macro","action":"mine","args":{}}
+                """,
+                """
+                {"type":"action_ok"}
+                """));
+        assertEquals("action", p.tasks.get(0).type);
+        assertEquals("action_ok", p.tasks.get(0).verify.get("type").getAsString());
+    }
+
+    @Test
+    void replacesUnknownVerifyType() throws Exception {
+        TaskPlan p = TaskPlan.parse(plan(
+                """
+                {"id":"t1","type":"query","tool":"query_env","verify":{"type":"magic"}}
+                """,
+                """
+                {"type":"action_ok"}
+                """));
+        assertEquals("query_ok", p.tasks.get(0).verify.get("type").getAsString());
+    }
+
+    @Test
+    void defaultsMissingVerifyForQuery() throws Exception {
+        TaskPlan p = TaskPlan.parse(plan(
+                """
+                {"id":"t1","type":"query","tool":"query_env"}
+                """,
+                """
+                {"type":"action_ok"}
+                """));
+        assertEquals("query_ok", p.tasks.get(0).verify.get("type").getAsString());
+    }
+
+    @Test
     void requiresSuccessPredicate() {
         assertThrows(PlanException.class, () -> TaskPlan.parse(plan(
                 """

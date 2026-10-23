@@ -25,6 +25,20 @@ public final class TaskPlan {
     public final List<TaskNode> tasks;
     public final JsonObject raw;
 
+    private static final Set<String> VERIFY_TYPES = Set.of(
+            "inventory_count", "block_at", "blocks_count", "position_near", "entity_near",
+            "query_true", "query_ok", "action_ok", "all", "any", "not");
+    private static final Map<String, String> VERIFY_ALIASES = Map.ofEntries(
+            Map.entry("inventory_has", "inventory_count"),
+            Map.entry("inventory", "inventory_count"),
+            Map.entry("item_count", "inventory_count"),
+            Map.entry("block", "block_at"),
+            Map.entry("block_exists", "blocks_count"),
+            Map.entry("position", "position_near"),
+            Map.entry("entity", "entity_near"),
+            Map.entry("query", "query_true"),
+            Map.entry("always", "action_ok"));
+
     private TaskPlan(int version, String goal, JsonArray success, Budget budget,
                      List<TaskNode> tasks, JsonObject raw) {
         this.version = version;
@@ -104,9 +118,56 @@ public final class TaskPlan {
                 }
             }
         }
+        for (TaskNode task : tasks) {
+            normalize(task);
+        }
         detectCycle(tasks);
         restoreState(root, tasks);
         return new TaskPlan(version, goal, success, Budget.from(root), tasks, root);
+    }
+
+    private static void normalize(TaskNode task) {
+        if ("macro".equals(task.type) && task.macro == null) {
+            if (task.action != null) {
+                task.type = "action";
+            } else if (task.tool != null) {
+                task.type = "query";
+            }
+        }
+        task.verify = normalizeVerify(task.verify, task.type);
+    }
+
+    private static JsonObject normalizeVerify(JsonObject spec, String taskType) {
+        if (spec == null || !spec.has("type")) {
+            return defaultVerify(taskType);
+        }
+        String type = spec.get("type").getAsString();
+        String mapped = VERIFY_ALIASES.get(type);
+        if (mapped != null) {
+            spec.addProperty("type", mapped);
+            type = mapped;
+        }
+        if (!VERIFY_TYPES.contains(type)) {
+            return defaultVerify(taskType);
+        }
+        if (("all".equals(type) || "any".equals(type)) && spec.has("of") && spec.get("of").isJsonArray()) {
+            JsonArray of = spec.getAsJsonArray("of");
+            for (int i = 0; i < of.size(); i++) {
+                if (of.get(i).isJsonObject()) {
+                    of.set(i, normalizeVerify(of.get(i).getAsJsonObject(), taskType));
+                }
+            }
+        }
+        if ("not".equals(type) && spec.has("of") && spec.get("of").isJsonObject()) {
+            spec.add("of", normalizeVerify(spec.getAsJsonObject("of"), taskType));
+        }
+        return spec;
+    }
+
+    private static JsonObject defaultVerify(String taskType) {
+        JsonObject o = new JsonObject();
+        o.addProperty("type", "query".equals(taskType) ? "query_ok" : "action_ok");
+        return o;
     }
 
     private static void restoreState(JsonObject root, List<TaskNode> tasks) {

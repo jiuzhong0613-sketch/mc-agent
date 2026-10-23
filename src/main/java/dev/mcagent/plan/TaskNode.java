@@ -12,14 +12,14 @@ public final class TaskNode {
 
     public final String id;
     public final String title;
-    public final String type;
+    public String type;
     public final String tool;
     public final String action;
     public final String macro;
     public final String skill;
     public final JsonObject args;
     public final List<String> dependsOn;
-    public final JsonObject verify;
+    public JsonObject verify;
     public final int retries;
 
     public Status status = Status.PENDING;
