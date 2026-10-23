@@ -1,0 +1,181 @@
+package dev.mcagent.plan;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Parsed and validated plan. Pure data: no Minecraft types, unit-testable.
+ */
+public final class TaskPlan {
+    public final int version;
+    public final String goal;
+    public final JsonArray success;
+    public final Budget budget;
+    public final List<TaskNode> tasks;
+    public final JsonObject raw;
+
+    private TaskPlan(int version, String goal, JsonArray success, Budget budget,
+                     List<TaskNode> tasks, JsonObject raw) {
+        this.version = version;
+        this.goal = goal;
+        this.success = success;
+        this.budget = budget;
+        this.tasks = tasks;
+        this.raw = raw;
+    }
+
+    public static TaskPlan parse(String json) throws PlanException {
+        JsonObject root;
+        try {
+            root = JsonParser.parseString(json).getAsJsonObject();
+        } catch (Exception e) {
+            throw new PlanException("plan is not a JSON object");
+        }
+        int version = root.has("version") ? root.get("version").getAsInt() : 1;
+        if (version != 1) {
+            throw new PlanException("unsupported plan version: " + version);
+        }
+        String goal = root.has("goal") ? root.get("goal").getAsString() : "";
+        if (goal.isBlank()) {
+            throw new PlanException("plan has no goal");
+        }
+        JsonArray success = root.has("success") ? root.getAsJsonArray("success") : new JsonArray();
+        if (success.isEmpty()) {
+            throw new PlanException("plan has no success predicate");
+        }
+        JsonArray taskArray = root.has("tasks") ? root.getAsJsonArray("tasks") : new JsonArray();
+        if (taskArray.isEmpty()) {
+            throw new PlanException("plan has no tasks");
+        }
+
+        List<TaskNode> tasks = new ArrayList<>();
+        Set<String> ids = new HashSet<>();
+        for (JsonElement element : taskArray) {
+            if (!element.isJsonObject()) {
+                throw new PlanException("task is not an object");
+            }
+            JsonObject t = element.getAsJsonObject();
+            String id = text(t, "id");
+            if (id.isBlank()) {
+                throw new PlanException("task without id");
+            }
+            if (!ids.add(id)) {
+                throw new PlanException("duplicate task id: " + id);
+            }
+            String type = text(t, "type");
+            if (!Set.of("action", "query", "skill", "macro", "assert").contains(type)) {
+                throw new PlanException("unknown task type: " + type);
+            }
+            List<String> depends = new ArrayList<>();
+            if (t.has("dependsOn")) {
+                for (JsonElement dep : t.getAsJsonArray("dependsOn")) {
+                    depends.add(dep.getAsString());
+                }
+            }
+            tasks.add(new TaskNode(
+                    id,
+                    text(t, "title"),
+                    type,
+                    t.has("tool") ? t.get("tool").getAsString() : null,
+                    t.has("action") ? t.get("action").getAsString() : null,
+                    t.has("macro") ? t.get("macro").getAsString() : null,
+                    t.has("skill") ? t.get("skill").getAsString() : null,
+                    t.has("args") ? t.getAsJsonObject("args") : new JsonObject(),
+                    depends,
+                    t.has("verify") ? t.getAsJsonObject("verify") : null,
+                    t.has("retries") ? t.get("retries").getAsInt() : 1));
+        }
+
+        for (TaskNode task : tasks) {
+            for (String dep : task.dependsOn) {
+                if (!ids.contains(dep)) {
+                    throw new PlanException("task " + task.id + " depends on unknown " + dep);
+                }
+            }
+        }
+        detectCycle(tasks);
+        return new TaskPlan(version, goal, success, Budget.from(root), tasks, root);
+    }
+
+    private static void detectCycle(List<TaskNode> tasks) throws PlanException {
+        Map<String, TaskNode> byId = new HashMap<>();
+        tasks.forEach(t -> byId.put(t.id, t));
+        Map<String, Integer> state = new HashMap<>();
+        for (TaskNode task : tasks) {
+            visit(task, byId, state);
+        }
+    }
+
+    private static void visit(TaskNode task, Map<String, TaskNode> byId, Map<String, Integer> state)
+            throws PlanException {
+        Integer mark = state.get(task.id);
+        if (mark != null && mark == 1) {
+            throw new PlanException("dependency cycle at " + task.id);
+        }
+        if (mark != null && mark == 2) {
+            return;
+        }
+        state.put(task.id, 1);
+        for (String dep : task.dependsOn) {
+            visit(byId.get(dep), byId, state);
+        }
+        state.put(task.id, 2);
+    }
+
+    /** Dependency-first order, preserving declaration order where possible. */
+    public List<TaskNode> topological() {
+        Map<String, TaskNode> byId = new HashMap<>();
+        tasks.forEach(t -> byId.put(t.id, t));
+        List<TaskNode> ordered = new ArrayList<>();
+        Set<String> done = new HashSet<>();
+        Deque<TaskNode> queue = new ArrayDeque<>(tasks);
+        int guard = 0;
+        while (!queue.isEmpty() && guard++ < tasks.size() * tasks.size() + 1) {
+            TaskNode task = queue.pollFirst();
+            if (done.contains(task.id)) {
+                continue;
+            }
+            if (done.containsAll(task.dependsOn)) {
+                ordered.add(task);
+                done.add(task.id);
+            } else {
+                queue.addLast(task);
+            }
+        }
+        for (TaskNode t : tasks) {
+            if (!done.contains(t.id)) {
+                ordered.add(t);
+            }
+        }
+        return ordered;
+    }
+
+    public boolean successVerified(Verifier.Result result) {
+        return result.ok;
+    }
+
+    public JsonObject toJson() {
+        JsonObject o = raw.deepCopy();
+        JsonArray statuses = new JsonArray();
+        for (TaskNode task : tasks) {
+            statuses.add(task.toJson());
+        }
+        o.add("taskState", statuses);
+        return o;
+    }
+
+    private static String text(JsonObject o, String key) {
+        return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : "";
+    }
+}

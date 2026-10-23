@@ -32,10 +32,16 @@ minecraft {
 
 repositories {
     mavenLocal()
+    mavenCentral()
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 tasks.named('jar', Jar).configure {

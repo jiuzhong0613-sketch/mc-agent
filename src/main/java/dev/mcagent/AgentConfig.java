@@ -49,8 +49,8 @@ public final class AgentConfig {
         b.comment("Hosted LLM API. Local and self-hosted endpoints are rejected.")
                 .push("llm");
         BASE_URL = b.comment("OpenAI-compatible base URL. Must be https and non-local.")
-                .define("baseUrl", "https://api.openai.com/v1");
-        MODEL = b.comment("Model name.").define("model", "gpt-4o-mini");
+                .define("baseUrl", "https://api.deepseek.com/v1");
+        MODEL = b.comment("Model name.").define("model", "deepseek-chat");
         MAX_STEPS = b.comment("Hard cap on model calls per run.").defineInRange("maxSteps", 20, 1, 200);
         MAX_QUERIES = b.comment("Read-only queries allowed per model step.").defineInRange("maxQueriesPerStep", 6, 1, 32);
         MAX_TOKENS = b.comment("max_tokens per request.").defineInRange("maxTokens", 700, 64, 8192);
